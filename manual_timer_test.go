@@ -1,6 +1,7 @@
 package tme
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -47,6 +48,32 @@ func TestManualTimerStop(t *testing.T) {
 	select {
 	case <-ach:
 		t.Errorf("Done received when it shouldn't have")
+	case <-time.After(dur):
+	}
+}
+
+func TestManualTimerMultipleStop(t *testing.T) {
+	const n = 10
+	const dur = 100 * time.Millisecond
+	timer := NewManualTimer()
+	if !timer.Stop() {
+		t.Fatalf("first call to stop didn't return true")
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			if timer.Stop() {
+				t.Errorf("call # %d to stop returned true", i)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	select {
+	case <-timer.Done():
+		t.Errorf("Done returned")
 	case <-time.After(dur):
 	}
 }
