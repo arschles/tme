@@ -7,7 +7,7 @@ import (
 
 const dur = 500 * time.Millisecond
 
-func TestDone(t *testing.T) {
+func TestRealTimerDone(t *testing.T) {
 	now := time.Now()
 	timer := NewRealTimer(dur)
 	select {
