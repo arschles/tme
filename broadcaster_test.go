@@ -1,6 +1,7 @@
 package tme
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -13,9 +14,14 @@ func TestBroadcast(t *testing.T) {
 		b.addChan(ch)
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		b.broadcast(Ack{Time: time.Now(), Fn: func() {}})
 	}()
+
+	wg.Wait()
 
 	for i, ch := range chans {
 		select {
@@ -26,14 +32,14 @@ func TestBroadcast(t *testing.T) {
 	}
 }
 
-func TestCloseAllChans(t *testing.T) {
+func TestBroadcasterClose(t *testing.T) {
 	const dur = 10 * time.Millisecond
 	chans := []chan Ack{make(chan Ack), make(chan Ack), make(chan Ack)}
 	b := newAckBroadcaster()
 	for _, ch := range chans {
 		b.addChan(ch)
 	}
-	b.closeAllChans()
+	b.close()
 	for i, ch := range chans {
 		select {
 		case <-ch:

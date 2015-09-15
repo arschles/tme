@@ -11,25 +11,28 @@ func newAckBroadcaster() *ackBroadcaster {
 	return &ackBroadcaster{}
 }
 
+// addChan registers ch to be sent to on all future calls to broadcast
 func (a *ackBroadcaster) addChan(ch chan Ack) {
 	a.Lock()
 	defer a.Unlock()
 	a.chans = append(a.chans, ch)
 }
 
+// broadcast asynchronously sends ack on all chans that have been registered with addChan.
 func (a *ackBroadcaster) broadcast(ack Ack) {
-	var wg sync.WaitGroup
+	a.RLock()
+	defer a.RUnlock()
 	for _, ch := range a.chans {
-		wg.Add(1)
 		go func(ch chan Ack) {
-			defer wg.Done()
 			ch <- ack
 		}(ch)
 	}
-	wg.Wait()
 }
 
-func (a *ackBroadcaster) closeAllChans() {
+// close closes all channels registered with this broadcaster
+func (a *ackBroadcaster) close() {
+	a.RLock()
+	defer a.RUnlock()
 	for _, ch := range a.chans {
 		close(ch)
 	}
