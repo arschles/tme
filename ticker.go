@@ -2,8 +2,8 @@ package tme
 
 // Ticker continuously sends on Chan() channel until Stop is called
 type Ticker interface {
-	// Chan returns a channel that receives every time the ticker ticks. The chan will be
-	// closed when Stop is called
+	// Chan returns a channel that receives every time the ticker ticks. The chan will
+	// not receieve and stay open when Stop is called
 	//
 	// The receiver of the tick may call ack.Fn() to acknowledge its receipt of the tick,
 	// but it's not a requirement.
