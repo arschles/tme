@@ -10,36 +10,21 @@ import (
 // Useful for writing deterministic tests against code that relies on real time
 type ManualTicker struct {
 	sync.RWMutex
-	ackFn    func()
-	sigs     *signals
-	tickTime time.Time
-	stopped  int32
+	ackFn   func()
+	tickCh  chan Ack
+	stopped int32
 }
 
 func NewManualTicker(ackFn func()) *ManualTicker {
 	return &ManualTicker{
-		ackFn:    ackFn,
-		sigs:     newSignals(),
-		tickTime: time.Time{},
-		stopped:  0,
+		ackFn:   ackFn,
+		tickCh:  make(chan Ack),
+		stopped: 0,
 	}
 }
 
 func (t *ManualTicker) Chan() <-chan Ack {
-	ch := make(chan Ack)
-	if atomic.LoadInt32(&t.stopped) == 1 {
-		return ch
-	}
-
-	sigCh := make(chan struct{})
-	t.sigs.add(sigCh)
-	go func() {
-		<-sigCh
-		t.RLock()
-		ch <- Ack{Time: t.tickTime, Fn: t.ackFn}
-		t.RUnlock()
-	}()
-	return ch
+	return t.tickCh
 }
 
 // Tick manually triggers a new tick
@@ -47,7 +32,7 @@ func (t *ManualTicker) Tick() {
 	if atomic.LoadInt32(&t.stopped) == 1 {
 		return
 	}
-	t.sigs.broadcast()
+	t.tickCh <- Ack{Time: time.Now(), Fn: t.ackFn}
 }
 
 func (t *ManualTicker) Stop() bool {
