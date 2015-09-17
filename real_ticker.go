@@ -1,31 +1,56 @@
 package tme
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 )
 
 // RealTicker is a Ticker implementation that uses real time
 type RealTicker struct {
-	ticker  *time.Ticker
-	stopped int32
+	sync.RWMutex
+	ackFn    func()
+	stopped  int32
+	sigs     *signals
+	tickTime time.Time
 }
 
-func NewRealTicker(dur time.Duration) *RealTicker {
-	return &RealTicker{ticker: time.NewTicker(dur), stopped: 0}
+func NewRealTicker(dur time.Duration, ackFn func()) *RealTicker {
+	t := &RealTicker{
+		ackFn:    ackFn,
+		stopped:  0,
+		sigs:     newSignals(),
+		tickTime: time.Time{},
+	}
+	go func() {
+		ticker := time.NewTicker(dur)
+		defer ticker.Stop()
+		for {
+			if atomic.LoadInt32(&t.stopped) == 1 {
+				return
+			}
+			t.Lock()
+			t.tickTime = <-ticker.C
+			t.Unlock()
+			t.sigs.broadcast()
+		}
+	}()
+	return t
 }
 
 func (t *RealTicker) Chan() <-chan Ack {
 	ch := make(chan Ack)
-	if atomic.LoadInt32(&t.stopped) == 1 {
-		close(ch)
-		return ch
-	}
+	sigCh := make(chan struct{})
 	go func() {
-		defer close(ch)
-		for atomic.LoadInt32(&t.stopped) == 0 {
-			tickTime := <-t.ticker.C
-			ch <- Ack{Time: tickTime, Fn: func() {}}
+		for {
+			if atomic.LoadInt32(&t.stopped) == 1 {
+				return
+			}
+			<-sigCh
+			t.RLock()
+			tickTime := t.tickTime
+			t.RUnlock()
+			ch <- Ack{Time: tickTime, Fn: t.ackFn}
 		}
 	}()
 	return ch

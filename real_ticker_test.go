@@ -1,6 +1,7 @@
 package tme
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -8,7 +9,7 @@ import (
 func TestRealTickerSynchronousTicks(t *testing.T) {
 	const dur = 1 * time.Millisecond
 	const numChecks = 5
-	ticker := NewRealTicker(dur)
+	ticker := NewRealTicker(dur, func() {})
 	defer ticker.Stop()
 	ch := ticker.Chan()
 	for i := 0; i < numChecks; i++ {
@@ -17,5 +18,49 @@ func TestRealTickerSynchronousTicks(t *testing.T) {
 		case <-time.After(dur * 2):
 			t.Fatalf("ticker didn't tick within %s", dur*2)
 		}
+	}
+}
+
+func TestRealTickerBroadcastTicker(t *testing.T) {
+	const dur = 10 * time.Millisecond
+	const numChecks = 5
+	const numThreads = 10
+	ticker := NewRealTicker(dur, func() {})
+	ch := ticker.Chan()
+	defer ticker.Stop()
+	var wg sync.WaitGroup
+	for i := 0; i < numThreads; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			select {
+			case <-ch:
+			case <-time.After(dur * 10):
+				t.Errorf("ticker didn't tick within %s (thread %d)", dur*10, i)
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
+func TestRealTickerStop(t *testing.T) {
+	const dur = 10 * time.Millisecond
+	ticker := NewRealTicker(dur, func() {})
+	bch := ticker.Chan()
+	select {
+	case <-bch:
+	case <-time.After(dur * 2):
+		t.Errorf("ticker didn't tick within %s", dur*2)
+	}
+	ticker.Stop()
+	select {
+	case <-bch:
+		t.Errorf("ticker ticked after stop called")
+	case <-time.After(dur * 2):
+	}
+	select {
+	case <-ticker.Chan():
+		t.Errorf("new channel from ticker ticked after stop called")
+	case <-time.After(dur * 2):
 	}
 }
