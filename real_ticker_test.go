@@ -1,7 +1,6 @@
 package tme
 
 import (
-	"sync"
 	"testing"
 	"time"
 )
@@ -19,28 +18,6 @@ func TestRealTickerSynchronousTicks(t *testing.T) {
 			t.Fatalf("ticker didn't tick within %s (thread %d)", dur*2, i)
 		}
 	}
-}
-
-func TestRealTickerBroadcastTicker(t *testing.T) {
-	const dur = 10 * time.Millisecond
-	const numChecks = 5
-	const numThreads = 10
-	ticker := NewRealTicker(dur, func() {})
-	defer ticker.Stop()
-	ch := ticker.Chan()
-	var wg sync.WaitGroup
-	for i := 0; i < numThreads; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			select {
-			case <-ch:
-			case <-time.After(dur * 10):
-				t.Errorf("ticker didn't tick within %s (thread %d)", dur*10, i)
-			}
-		}(i)
-	}
-	wg.Wait()
 }
 
 func TestRealTickerStop(t *testing.T) {
