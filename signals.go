@@ -18,11 +18,13 @@ func (a *signals) add(ch chan struct{}) {
 	a.Unlock()
 }
 
-// broadcast synchronously sends ack on all chans that have been registered with addChan.
+// broadcast asynchronously sends ack on all chans that have been registered with add
 func (a *signals) broadcast() {
 	a.RLock()
 	defer a.RUnlock()
 	for _, ch := range a.chans {
-		ch <- struct{}{}
+		go func(ch chan<- struct{}) {
+			ch <- struct{}{}
+		}(ch)
 	}
 }
