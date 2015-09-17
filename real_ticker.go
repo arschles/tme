@@ -41,6 +41,7 @@ func NewRealTicker(dur time.Duration, ackFn func()) *RealTicker {
 func (t *RealTicker) Chan() <-chan Ack {
 	ch := make(chan Ack)
 	sigCh := make(chan struct{})
+	t.sigs.add(sigCh)
 	go func() {
 		for {
 			if atomic.LoadInt32(&t.stopped) == 1 {
