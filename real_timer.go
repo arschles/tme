@@ -19,6 +19,7 @@ type RealTimer struct {
 	doneCh  chan Ack
 }
 
+// NewRealTimer creates a Timer that operates on real time. It wraps a time.Timer
 func NewRealTimer(dur time.Duration, ackFn func()) *RealTimer {
 	timer := time.NewTimer(dur)
 	return &RealTimer{
@@ -29,6 +30,7 @@ func NewRealTimer(dur time.Duration, ackFn func()) *RealTimer {
 	}
 }
 
+// Done is the interface implementation
 func (r *RealTimer) Done() <-chan Ack {
 	go func() {
 		for {
@@ -42,6 +44,7 @@ func (r *RealTimer) Done() <-chan Ack {
 	return r.doneCh
 }
 
+// Stop is the interface implementation
 func (r *RealTimer) Stop() bool {
 	if atomic.CompareAndSwapInt32(&r.stopped, 0, 1) {
 		r.timer.Stop()

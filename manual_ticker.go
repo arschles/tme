@@ -15,6 +15,7 @@ type ManualTicker struct {
 	stopped int32
 }
 
+// NewManualTicker creates a new Ticker that can be controlled manually.
 func NewManualTicker(ackFn func()) *ManualTicker {
 	return &ManualTicker{
 		ackFn:   ackFn,
@@ -23,6 +24,7 @@ func NewManualTicker(ackFn func()) *ManualTicker {
 	}
 }
 
+// Chan is the interface implementation
 func (t *ManualTicker) Chan() <-chan Ack {
 	return t.tickCh
 }
@@ -36,6 +38,7 @@ func (t *ManualTicker) Tick() {
 	t.tickCh <- Ack{Time: time.Now(), Fn: t.ackFn}
 }
 
+// Stop is the interface implementation
 func (t *ManualTicker) Stop() bool {
 	return atomic.CompareAndSwapInt32(&t.stopped, 0, 1)
 }

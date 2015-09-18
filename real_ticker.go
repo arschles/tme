@@ -13,6 +13,7 @@ type RealTicker struct {
 	stopCh  chan struct{}
 }
 
+// NewRealTicker creates a Ticker that operates on real time. It wraps a time.Ticker.
 func NewRealTicker(dur time.Duration, ackFn func()) *RealTicker {
 	t := &RealTicker{
 		ackFn:   ackFn,
@@ -38,10 +39,12 @@ func NewRealTicker(dur time.Duration, ackFn func()) *RealTicker {
 	return t
 }
 
+// Chan is the interface implementation
 func (t *RealTicker) Chan() <-chan Ack {
 	return t.tickCh
 }
 
+// Stop is the interface implementation
 func (t *RealTicker) Stop() bool {
 	if atomic.CompareAndSwapInt32(&t.stopped, 0, 1) {
 		close(t.stopCh)

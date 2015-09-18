@@ -1,4 +1,4 @@
-// tme is a package that provides unified interfaces around tickers and timers for Go
+// Package tme provides unified interfaces around tickers and timers for Go
 // programs. It provides a Timer and Ticker interface, each with an implementation
 // that uses real time and an implementation that can be manually controlled.
 //
