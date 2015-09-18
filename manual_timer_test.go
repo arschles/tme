@@ -2,6 +2,7 @@ package tme
 
 import (
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -95,7 +96,9 @@ func TestManualTimerAck(t *testing.T) {
 	})
 	defer timer.Stop()
 	ch := timer.Done()
-	timer.MarkDone()
+	if !timer.MarkDone() {
+		t.Errorf("timer was already marked done")
+	}
 	select {
 	case ack := <-ch:
 		go func() { ack.Fn() }()
@@ -107,5 +110,33 @@ func TestManualTimerAck(t *testing.T) {
 	case <-ackCh:
 	case <-time.After(dur):
 		t.Errorf("ack func wasn't called within %s", dur)
+	}
+}
+
+func TestManualTimerMultipleRecv(t *testing.T) {
+	const n = 10
+	timer := NewManualTimer(func() {})
+	defer timer.Stop()
+	go func() {
+		if !timer.MarkDone() {
+			t.Errorf("timer was already marked done")
+		}
+	}()
+	numDones := int32(0)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	for i := 0; i < n; i++ {
+		go func() {
+			select {
+			case <-timer.Done():
+				atomic.AddInt32(&numDones, 1)
+				wg.Done()
+			case <-time.After(dur):
+			}
+		}()
+	}
+	wg.Wait()
+	if atomic.LoadInt32(&numDones) != 1 {
+		t.Errorf("%d done channels received", atomic.LoadInt32(&numDones))
 	}
 }
