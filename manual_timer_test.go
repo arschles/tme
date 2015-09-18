@@ -8,7 +8,8 @@ import (
 
 func TestManualTimerMarkDone(t *testing.T) {
 	const dur = 100 * time.Millisecond
-	timer := NewManualTimer()
+	timer := NewManualTimer(func() {})
+	defer timer.Stop()
 	bch := timer.Done()
 	select {
 	case <-bch:
@@ -35,8 +36,7 @@ func TestManualTimerMarkDone(t *testing.T) {
 }
 
 func TestManualTimerStop(t *testing.T) {
-	const dur = 100 * time.Millisecond
-	timer := NewManualTimer()
+	timer := NewManualTimer(func() {})
 	bch := timer.Done()
 	timer.Stop()
 	ach := timer.Done()
@@ -54,8 +54,7 @@ func TestManualTimerStop(t *testing.T) {
 
 func TestManualTimerMultipleStop(t *testing.T) {
 	const n = 10
-	const dur = 100 * time.Millisecond
-	timer := NewManualTimer()
+	timer := NewManualTimer(func() {})
 	if !timer.Stop() {
 		t.Fatalf("first call to stop didn't return true")
 	}
@@ -75,5 +74,39 @@ func TestManualTimerMultipleStop(t *testing.T) {
 	case <-timer.Done():
 		t.Errorf("Done returned")
 	case <-time.After(dur):
+	}
+}
+
+func TestManualTimerDoneAfterStop(t *testing.T) {
+	timer := NewManualTimer(func() {})
+	ch := timer.Done()
+	timer.Stop()
+
+	select {
+	case <-ch:
+		t.Errorf("done channel received after stop")
+	case <-time.After(dur):
+	}
+}
+
+func TestManualTimerAck(t *testing.T) {
+	ackCh := make(chan struct{})
+	timer := NewManualTimer(func() {
+		ackCh <- struct{}{}
+	})
+	defer timer.Stop()
+	ch := timer.Done()
+	timer.MarkDone()
+	select {
+	case ack := <-ch:
+		go func() { ack.Fn() }()
+	case <-time.After(dur):
+		t.Errorf("timer wasn't done within %s", dur)
+	}
+
+	select {
+	case <-ackCh:
+	case <-time.After(dur):
+		t.Errorf("ack func wasn't called within %s", dur)
 	}
 }

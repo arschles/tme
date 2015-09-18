@@ -13,27 +13,33 @@ import (
 //    log.Printf("timer done")
 //  }()
 type RealTimer struct {
+	ackFn   func()
 	timer   *time.Timer
 	stopped int32
+	doneCh  chan Ack
 }
 
-func NewRealTimer(dur time.Duration) *RealTimer {
+func NewRealTimer(dur time.Duration, ackFn func()) *RealTimer {
 	timer := time.NewTimer(dur)
-	return &RealTimer{timer: timer, stopped: 0}
+	return &RealTimer{
+		ackFn:   ackFn,
+		timer:   timer,
+		stopped: 0,
+		doneCh:  make(chan Ack),
+	}
 }
 
 func (r *RealTimer) Done() <-chan Ack {
-	ch := make(chan Ack)
 	go func() {
 		for {
 			if atomic.LoadInt32(&r.stopped) != 0 {
 				return
 			}
 			recvT := <-r.timer.C
-			ch <- Ack{Time: recvT, Fn: func() {}}
+			r.doneCh <- Ack{Time: recvT, Fn: r.ackFn}
 		}
 	}()
-	return ch
+	return r.doneCh
 }
 
 func (r *RealTimer) Stop() bool {

@@ -7,7 +7,8 @@ import (
 
 func TestRealTimerDone(t *testing.T) {
 	now := time.Now()
-	timer := NewRealTimer(dur)
+	timer := NewRealTimer(dur, func() {})
+	defer timer.Stop()
 	select {
 	case done := <-timer.Done():
 		if done.Time.After(now.Add(dur * 2)) {
@@ -18,8 +19,8 @@ func TestRealTimerDone(t *testing.T) {
 	}
 }
 
-func TestMultipleStop(t *testing.T) {
-	timer := NewRealTimer(dur)
+func TestRealTimerMultipleStop(t *testing.T) {
+	timer := NewRealTimer(dur, func() {})
 	if !timer.Stop() {
 		t.Fatal("first stop call returned false")
 	}
@@ -32,8 +33,8 @@ func TestMultipleStop(t *testing.T) {
 	}
 }
 
-func TestDoneAfterStop(t *testing.T) {
-	timer := NewRealTimer(dur)
+func TestRealTimerDoneAfterStop(t *testing.T) {
+	timer := NewRealTimer(dur, func() {})
 	if !timer.Stop() {
 		t.Fatal("stop returned false")
 	}
@@ -42,5 +43,26 @@ func TestDoneAfterStop(t *testing.T) {
 	case <-time.After(dur):
 	case <-ch:
 		t.Errorf("channel returned after stop called")
+	}
+}
+
+func TestRealTimerAck(t *testing.T) {
+	ackCh := make(chan struct{})
+	timer := NewRealTimer(dur, func() {
+		ackCh <- struct{}{}
+	})
+	defer timer.Stop()
+	ch := timer.Done()
+	select {
+	case ack := <-ch:
+		go func() { ack.Fn() }()
+	case <-time.After(dur * 2):
+		t.Errorf("timer didn't stop after %s", dur*2)
+	}
+
+	select {
+	case <-ackCh:
+	case <-time.After(dur):
+		t.Errorf("ack chan didn't receive after %s", dur)
 	}
 }
