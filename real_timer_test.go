@@ -64,3 +64,13 @@ func TestRealTimerAck(t *testing.T) {
 		t.Errorf("ack chan didn't receive after %s", dur)
 	}
 }
+
+func TestRealTimerMultipleRecv(t *testing.T) {
+	const n = 10
+	timer := NewRealTimer(dur, func() {})
+	defer timer.Stop()
+	numDones := numTimerRecv(timer, 10)
+	if numDones != 1 {
+		t.Errorf("%d done channel receives", numDones)
+	}
+}

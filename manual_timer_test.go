@@ -18,7 +18,7 @@ func TestManualTimerMarkDone(t *testing.T) {
 	case <-time.After(dur):
 	}
 
-	timer.MarkDone()
+	go func() { timer.MarkDone() }()
 	ach := timer.Done()
 
 	// bch should receive and close
@@ -28,11 +28,11 @@ func TestManualTimerMarkDone(t *testing.T) {
 		t.Errorf("timer was not marked done after %s", dur)
 	}
 
-	// ach should receive and close
+	// ach should never receive nor close
 	select {
 	case <-ach:
+		t.Errorf("done chan received after MarkDone called")
 	case <-time.After(dur):
-		t.Errorf("Done didn't receive within %s", dur)
 	}
 }
 
@@ -114,7 +114,6 @@ func TestManualTimerAck(t *testing.T) {
 }
 
 func TestManualTimerMultipleRecv(t *testing.T) {
-	const n = 10
 	timer := NewManualTimer(func() {})
 	defer timer.Stop()
 	go func() {
@@ -122,21 +121,8 @@ func TestManualTimerMultipleRecv(t *testing.T) {
 			t.Errorf("timer was already marked done")
 		}
 	}()
-	numDones := int32(0)
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	for i := 0; i < n; i++ {
-		go func() {
-			select {
-			case <-timer.Done():
-				atomic.AddInt32(&numDones, 1)
-				wg.Done()
-			case <-time.After(dur):
-			}
-		}()
-	}
-	wg.Wait()
-	if atomic.LoadInt32(&numDones) != 1 {
-		t.Errorf("%d done channels received", atomic.LoadInt32(&numDones))
+	numDones := numTimerRecv(timer, 10)
+	if numDones != 1 {
+		t.Errorf("%d done channel receives", atomic.LoadInt32(&numDones))
 	}
 }
