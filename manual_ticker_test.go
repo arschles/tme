@@ -8,12 +8,11 @@ import (
 func TestManualTickerTick(t *testing.T) {
 	ticker := NewManualTicker(func() {})
 	defer ticker.Stop()
-	ch := ticker.Chan()
 	go func() {
 		ticker.Tick()
 	}()
 	select {
-	case <-ch:
+	case <-ticker.Chan():
 	case <-time.After(dur):
 		t.Errorf("didn't tick within %s", dur)
 	}
@@ -22,12 +21,11 @@ func TestManualTickerTick(t *testing.T) {
 func TestManualTickerTickAfterStop(t *testing.T) {
 	ticker := NewManualTicker(func() {})
 	ticker.Stop()
-	ch := ticker.Chan()
 	go func() {
 		ticker.Tick()
 	}()
 	select {
-	case <-ch:
+	case <-ticker.Chan():
 		t.Errorf("ticker ticked after stop")
 	case <-time.After(dur):
 	}
@@ -39,12 +37,11 @@ func TestManualTickerAck(t *testing.T) {
 		ackCh <- struct{}{}
 	})
 	defer ticker.Stop()
-	ch := ticker.Chan()
 	go func() {
 		ticker.Tick()
 	}()
 	select {
-	case ack := <-ch:
+	case ack := <-ticker.Chan():
 		go func() { ack.Fn() }()
 	case <-time.After(dur):
 		t.Errorf("ticker didn't tick within %s", dur)

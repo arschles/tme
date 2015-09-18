@@ -45,10 +45,9 @@ func TestRealTickerStop(t *testing.T) {
 func TestRealTickerAck(t *testing.T) {
 	ackCh := make(chan struct{})
 	ticker := NewRealTicker(dur, func() { ackCh <- struct{}{} })
-	ch := ticker.Chan()
 	defer ticker.Stop()
 	select {
-	case ack := <-ch:
+	case ack := <-ticker.Chan():
 		go func() { ack.Fn() }()
 	case <-time.After(dur * 2):
 		t.Errorf("ticker didn't tick within %s", dur*2)

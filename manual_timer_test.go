@@ -39,14 +39,13 @@ func TestManualTimerStop(t *testing.T) {
 	timer := NewManualTimer(func() {})
 	bch := timer.Done()
 	timer.Stop()
-	ach := timer.Done()
 	select {
 	case <-bch:
 		t.Errorf("Done received when it shouldn't have")
 	case <-time.After(dur):
 	}
 	select {
-	case <-ach:
+	case <-timer.Done():
 		t.Errorf("Done received when it shouldn't have")
 	case <-time.After(dur):
 	}

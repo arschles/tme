@@ -38,10 +38,9 @@ func TestRealTimerDoneAfterStop(t *testing.T) {
 	if !timer.Stop() {
 		t.Fatal("stop returned false")
 	}
-	ch := timer.Done()
 	select {
 	case <-time.After(dur):
-	case <-ch:
+	case <-timer.Done():
 		t.Errorf("channel returned after stop called")
 	}
 }
@@ -52,9 +51,8 @@ func TestRealTimerAck(t *testing.T) {
 		ackCh <- struct{}{}
 	})
 	defer timer.Stop()
-	ch := timer.Done()
 	select {
-	case ack := <-ch:
+	case ack := <-timer.Done():
 		go func() { ack.Fn() }()
 	case <-time.After(dur * 2):
 		t.Errorf("timer didn't stop after %s", dur*2)
