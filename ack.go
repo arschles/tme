@@ -2,7 +2,7 @@ package tme
 
 import "time"
 
-// Ack is sent by Ticker and Timer on each tick and when done (respectively
+// Ack is sent by Ticker and Timer on each tick or when done (respectively)
 type Ack struct {
 	// Time is the time the tick started or the timer was done
 	Time time.Time
