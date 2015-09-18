@@ -59,3 +59,13 @@ func TestRealTickerAck(t *testing.T) {
 		t.Errorf("ack didn't happen within %s", dur)
 	}
 }
+
+func TestRealTickerMultipleRecv(t *testing.T) {
+	const n = 10
+	ticker := NewRealTicker(dur, func() {})
+	defer ticker.Stop()
+	numRecvs := numTickerRecv(ticker, 10)
+	if numRecvs != 1 {
+		t.Errorf("%d ticker receives", numRecvs)
+	}
+}

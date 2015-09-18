@@ -53,3 +53,16 @@ func TestManualTickerAck(t *testing.T) {
 		t.Errorf("ack wasn't received within %s", dur)
 	}
 }
+
+func TestManualTickerMultipleRecv(t *testing.T) {
+	const n = 10
+	ticker := NewManualTicker(func() {})
+	go func() {
+		ticker.Tick()
+	}()
+	defer ticker.Stop()
+	numRecvs := numTickerRecv(ticker, 10)
+	if numRecvs != 1 {
+		t.Errorf("%d ticker receives", numRecvs)
+	}
+}
