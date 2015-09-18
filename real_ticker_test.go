@@ -6,7 +6,6 @@ import (
 )
 
 func TestRealTickerSynchronousTicks(t *testing.T) {
-	const dur = 1 * time.Millisecond
 	const numChecks = 5
 	ticker := NewRealTicker(dur, func() {})
 	defer ticker.Stop()
@@ -21,7 +20,6 @@ func TestRealTickerSynchronousTicks(t *testing.T) {
 }
 
 func TestRealTickerStop(t *testing.T) {
-	const dur = 10 * time.Millisecond
 	ticker := NewRealTicker(dur, func() {})
 	bch := ticker.Chan()
 	select {
@@ -35,11 +33,30 @@ func TestRealTickerStop(t *testing.T) {
 	select {
 	case <-bch:
 		t.Errorf("ticker ticked after stop called")
-	case <-time.After(dur * 2):
+	case <-time.After(dur):
 	}
 	select {
 	case <-ticker.Chan():
 		t.Errorf("new channel from ticker ticked after stop called")
+	case <-time.After(dur):
+	}
+}
+
+func TestRealTickerAck(t *testing.T) {
+	ackCh := make(chan struct{})
+	ticker := NewRealTicker(dur, func() { ackCh <- struct{}{} })
+	ch := ticker.Chan()
+	defer ticker.Stop()
+	select {
+	case ack := <-ch:
+		go func() { ack.Fn() }()
 	case <-time.After(dur * 2):
+		t.Errorf("ticker didn't tick within %s", dur*2)
+	}
+
+	select {
+	case <-ackCh:
+	case <-time.After(dur):
+		t.Errorf("ack didn't happen within %s", dur)
 	}
 }

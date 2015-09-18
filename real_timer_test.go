@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-const dur = 500 * time.Millisecond
-
 func TestRealTimerDone(t *testing.T) {
 	now := time.Now()
 	timer := NewRealTimer(dur)

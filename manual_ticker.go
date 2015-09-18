@@ -27,7 +27,8 @@ func (t *ManualTicker) Chan() <-chan Ack {
 	return t.tickCh
 }
 
-// Tick manually triggers a new tick
+// Tick manually triggers a new tick. It's a synchronous tick, so the other side
+// must receive on Chan() for this func to return
 func (t *ManualTicker) Tick() {
 	if atomic.LoadInt32(&t.stopped) == 1 {
 		return
